@@ -1,0 +1,62 @@
+#/bin/bash
+
+
+export instjar=V45206-01/fmw_12.1.3.0.0_bpm_quickstart.jar
+export instrsp=jdev_qs.rsp
+
+
+
+apply_BP4() {
+  
+    echo "Apply SOA BP 4"
+
+    export ORACLE_HOME=/u01/app/oracle/product/12.1.3/JDeveloper
+    export JAVA_HOME=/usr/java/default
+    cd ../SOASuiteandBPM_12.1.3.0.0/21885138
+    ${ORACLE_HOME}/OPatch/opatch apply -jdk $JAVA_HOME -silent
+
+  
+}
+
+
+echo "Start installation"
+if [ -f $instjar ] ; then
+  if [ -f $instrsp ] ; then
+    
+    java -Xmx1024m -jar ${instjar} -silent -responseFile $(pwd)/${instrsp} -invPtrLoc /u01/app/oraInst.loc 
+    echo "Install done, start config"
+  else
+    echo "responsfile \"$instrsp\" not found"
+    exit 255
+  fi
+else
+  echo "installer \"$instjar\" not found"
+  exit 255
+fi
+echo "Done!"
+
+
+
+apply_BP4
+
+
+echo "Create Desktop link"
+
+
+sudo -E bash -c 'cat > /usr/share/applications/JDeveloper.desktop <<EOF
+#!/usr/bin/env xdg-open
+
+[Desktop Entry]
+Version=1.0
+Type=Application
+Terminal=false
+Icon[en_US]=/u01/app/oracle/product/12.1.3/JDeveloper/jdeveloper/jdev/bin/jdev_icon.gif
+Name[en_US]=JDeveloper_12.1.3
+Exec=/u01/app/oracle/product/12.1.3/JDeveloper/jdeveloper/jdev/bin/jdev
+Name=JDeveloper_12.1.3
+Icon=/u01/app/oracle/product/12.1.3/JDeveloper/jdeveloper/jdev/bin/jdev_icon.gif
+Categories=FusionMiddleware
+EOF'
+
+
+

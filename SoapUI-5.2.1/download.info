@@ -1,0 +1,8 @@
+################################################################################
+# Download and preparation 
+################################################################################
+
+
+## Download SoapUI Open Source 5.2.1 Linux tarball (Java not included)
+Download "SoapUI-5.2.1-linux-bin.tar.gz" from http://www.soapui.org/downloads/soapui/open-source.html
+in this folder. 

@@ -1,0 +1,311 @@
+#!/bin/bash
+
+# Objective    : Unattended install Oracle 12gR1 SE TWO
+# Requirements : User oracle with sudo privileges
+
+
+# DBINSTFILESDIR directory containing expanded installation files
+export DBINSTFILESDIR="database"
+# INSTRSP installation response file
+export INSTRSP="db_install.rsp"
+# group name for inventory location
+export INV_UNIX_GROUP_NAME=g_fmw
+# Inventory location
+export INVENTORY_LOCATION=/u01/app/oraInventory
+
+
+## CONFIG SETTINGS
+export ORACLE_HOME=/u01/app/oracle/product/12.1.0/db/db_1
+export ORACLE_BASE=/u01/app/oracle/product/12.1.0/db
+export ORACLE_DATA=/u01/data/oradata
+# DB_NAME / GLOBAL DB NAME
+export DB_UNQ_NAME=ORCLDB12C
+# Instance name
+export STARTERDB_SID=ORCLDB12C
+# PASSWORD
+export GENERIC_PWD=welcome1
+
+
+##
+## Do not change the following variables
+##
+# Installation source location
+export instloc=`echo $2 | sed "s#%^%# #g"`
+# Hostname
+export INSTHOSTNAME=`hostname -s`
+# Install user
+export SUDO_USER=oracle
+# Instal user home directory
+export SUDO_USER_HOME=$(getent passwd $SUDO_USER | cut -d: -f6)
+# Separators
+export SEPS="\n###########################################################################"
+export SEPE="###########################################################################\n"
+
+
+##
+## Function   set_DB12cR1_env
+## Objective  Adds environment settings to profile
+##
+set_DB12cR1_env() {
+  cd ~
+  cat > set_DB12cR1_env << EOF
+
+  # Oracle Settings
+  export TMP=/tmp
+  export TMPDIR=$TMP
+
+  export ORACLE_HOSTNAME=`hostname -s`
+  export ORACLE_UNQNAME=${DB_UNQ_NAME}
+  export ORACLE_BASE=${ORACLE_BASE}
+  export ORACLE_HOME=${ORACLE_HOME}
+  export ORACLE_SID=${STARTERDB_SID}
+
+  export PATH=/usr/sbin:$PATH
+  export PATH=\$ORACLE_HOME/bin:\$PATH
+
+  export LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib
+  export CLASSPATH=\$ORACLE_HOME/jlib:\$ORACLE_HOME/rdbms/jlib
+
+  if [ \$USER = "$(whoami)" ]; then
+    if [ \$SHELL = "/bin/ksh" ]; then
+      ulimit -p 16384
+      ulimit -n 65536
+    else
+      ulimit -u 16384 -n 65536
+    fi
+  fi
+EOF
+  chmod u+x set_DB12cR1_env
+  if ! grep -q set_DB12cR1_env .bashrc ; then
+  echo . ~/set_DB12cR1_env >> .bash_profile
+  echo . ~/set_DB12cR1_env >> .bashrc
+  fi
+}
+
+# If respawned with set_DB12cR1_env
+if [ "$1" = "set_DB12cR1_env" ] ; then
+  set_DB12cR1_env
+  exit
+fi
+
+if [ "$1" = "altersystem" ] ; then
+cd ~
+. ./set_DB12cR1_env
+cd ${ORACLE_HOME}/bin
+./sqlplus SYS/${GENERIC_PWD} as SYSDBA << EOF
+ALTER SYSTEM set MEMORY_TARGET=536M scope=spfile;
+ALTER SYSTEM set MEMORY_MAX_TARGET=536M scope=spfile;
+ALTER SYSTEM set SGA_MAX_SIZE=424M scope=spfile;
+ALTER SYSTEM set SGA_TARGET=400M scope=spfile;
+ALTER SYSTEM set PGA_AGGREGATE_TARGET=90M scope=spfile;
+STARTUP FORCE;
+EOF
+exit
+fi
+
+# Re execute this script as root
+if [ `whoami` != "root" ] ; then
+  if [ "$1" == "respawned" ] ; then
+    echo "Not respawned as root"
+    exit 255
+  fi
+  echo "Respawing this process as root"
+  curdir=`pwd | sed "s# #%^%#g"`
+  sudo -s $0 respawned "$curdir"
+  echo "Back as installer user `whoami`"
+  exit
+fi
+
+echo -e "${SEPS}"
+echo "# Start installation"
+echo -e "${SEPE}"
+
+if [ -d $DBINSTFILESDIR ] ; then
+  if [ -f "$DBINSTFILESDIR/response/$INSTRSP" ] ; then
+
+    echo -e "${SEPS}"
+    echo "# Creating directory structure"
+    mkdir -p /u01/data/oradata
+
+    chown -R ${SUDO_USER}:${INV_UNIX_GROUP_NAME} /u01
+    chmod -R 775 /u01
+    echo -e "${SEPE}"
+
+    echo -e "${SEPS}"
+    echo "# Adding environment initialization scripts to profile"
+    sudo -u oracle -s $0 set_DB12cR1_env
+    echo -e "${SEPE}"
+
+    echo -e "${SEPS}"
+    echo "# Preparing responsefile"
+    #cd "$instloc"
+    cp "$DBINSTFILESDIR/response/$INSTRSP" /tmp
+    chown oracle:g_fmw "/tmp/${INSTRSP}"
+
+    sed --in-place "s#^\(oracle\.install\.option=\).*#\1INSTALL_DB_SWONLY#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(oracle.\install\.db.*GROUP=\).*#\1${INV_UNIX_GROUP_NAME}#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(oracle\.install\.db\.config\.starterdb\.type=\).*#\1GENERAL_PURPOSE#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(oracle\.install\.db\.ConfigureAsContainerDB=\).*#\1false#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(oracle\.install\.db\.config\.starterdb\.characterSet=\).*#\1AL32UTF8#" "/tmp/${INSTRSP}"
+
+    sed --in-place "s#^\(oracle\.install\.db\.config\.starterdb\.memoryOption=\).*#\1true#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(oracle\.install\.db\.config\.starterdb\.memoryLimit=\).*#\1256#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(oracle\.install\.db\.config\.starterdb\.installExampleSchemas=\).*#\1false#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(oracle\.install\.db\.config\.starterdb\.enableRecovery=\).*#\1false#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(oracle\.install\.db\.config\.starterdb\.storageType=\).*#\1FILE_SYSTEM_STORAGE#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(oracle\.install\.db\.config\.starterdb\.fileSystemStorage\.dataLocation=\).*#\1${ORACLE_DATA}#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(SECURITY_UPDATES_VIA_MYORACLESUPPORT=\).*#\1false#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(oracle\.install\.db\.config\.starterdb\.managementOption=\).*#\1${DEFAULT}#" "/tmp/${INSTRSP}"
+
+    sed --in-place "s#^\(ORACLE_HOSTNAME=\).*#\1${INSTHOSTNAME}#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(UNIX_GROUP_NAME=\).*#\1${INV_UNIX_GROUP_NAME}#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(INVENTORY_LOCATION=\).*#\1${INVENTORY_LOCATION}#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(ORACLE_HOME=\).*#\1${ORACLE_HOME}#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(ORACLE_BASE=\).*#\1${ORACLE_BASE}#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(oracle\.install\.db\.config\.starterdb\.globalDBName=\).*#\1${DB_UNQ_NAME}#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(oracle\.install\.db\.config\.starterdb\.SID=\).*#\1${STARTERDB_SID}#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(.*\.starterdb\.password.*=\).*#\1${GENERIC_PWD}#" "/tmp/${INSTRSP}"
+    sed --in-place "s#^\(oracle.install.db.InstallEdition=\).*#\1SE2#" "/tmp/${INSTRSP}"
+    echo -e "${SEPE}"
+
+    echo -e "${SEPS}"
+    echo "# Start install as ${SUDO_USER}"
+    sudo -u $SUDO_USER -s database/runInstaller -waitforcompletion -silent -responsefile /tmp/${INSTRSP}
+    echo -e "${SEPE}"
+
+    echo -e "${SEPS}"
+    echo "# copy libjavavm12.a"
+    echo "# circumvent \"error invoking target irman ioracle of makefile\""
+    sudo -u $SUDO_USER -s cp ${ORACLE_HOME}/javavm/jdk/jdk6/lib/libjavavm12.a ${ORACLE_HOME}/lib
+    echo -e "${SEPE}"
+
+    echo -e "${SEPS}"
+    echo "# Replace perl in Oracle Home"
+    echo "# circumvent 'Error while executing \"/u01/app/oracle/product/12.1.0.2/db_1/rdbms/admin/dbmssml.sql\"'"
+    curdir=$(pwd)
+    cd /tmp
+    mkdir perl
+    cd perl/
+    curl -O http://www.cpan.org/src/5.0/perl-5.14.1.tar.gz
+    tar -xvzf perl-5.14.1.tar.gz
+
+    cd $ORACLE_HOME
+    mv perl/ perl.OLD
+    mkdir perl
+    cd /tmp/perl/perl-5.14.1
+    ./Configure -des -Dprefix=$ORACLE_HOME/perl -Doptimize=-O3 -Dusethreads -Duseithreads -Duserelocatableinc
+    make
+    make install
+    cd $ORACLE_HOME/perl
+    cp -r ../perl.OLD/lib/ .
+    cp -r ../perl.OLD/man/ .
+    cd $curdir
+    echo -e "${SEPE}"
+
+    echo -e "${SEPS}"
+    echo "# Execute root scripts"
+    ${INVENTORY_LOCATION}/orainstRoot.sh
+    echo -e "/usr/local/bin\n" | ${ORACLE_HOME}/root.sh
+    echo -e "${SEPE}"
+
+    echo -e "${SEPS}"
+    echo "# relink all "
+    echo "# circumvent ORA-12547 TNS LOST"
+    sudo -u $SUDO_USER -s chmod 6751 ${ORACLE_HOME}/bin/oracle
+    sudo -u $SUDO_USER -E -s ${ORACLE_HOME}/bin/relink all
+    echo -e "${SEPE}"
+
+
+    echo -e "${SEPS}"
+    echo "# Preparing DBCA responsefile"
+    cp "$ORACLE_HOME/assistants/dbca/dbca.rsp" "$ORACLE_HOME/assistants/dbca/dbca.rsp.bak.$(date +\"%Y%m%d_%H%M%S\")"
+    sed --in-place "s#\#\? *\(.*PASSWORD\s.*=\)\s.*#\1 \"welcome1\"#" "$ORACLE_HOME/assistants/dbca/dbca.rsp"
+    sed --in-place "s#^\(GDBNAME\s=\).*#\1 \"${DB_UNQ_NAME}\"#" "$ORACLE_HOME/assistants/dbca/dbca.rsp"
+    sed --in-place "s#^\(INSTANCENAME\s=\).*#\1 \"${DB_UNQ_NAME}\"#" "$ORACLE_HOME/assistants/dbca/dbca.rsp"
+    sed --in-place "s#^\(SID\s=\).*#\1 \"${STARTERDB_SID}\"#" "$ORACLE_HOME/assistants/dbca/dbca.rsp"
+    sed --in-place "s#^\(DB_UNIQUE_NAME\s=\).*#\1 \"${DB_UNQ_NAME}\"#" "$ORACLE_HOME/assistants/dbca/dbca.rsp"
+    sed --in-place "s#^\#\(CHARACTERSET\s=\).*#\1 \"AL32UTF8\"#" "$ORACLE_HOME/assistants/dbca/dbca.rsp"
+    echo -e "${SEPE}"
+
+    echo -e "${SEPS}"
+    echo "# Excute Network Configuration Assistant as $SUDO_USER"
+    echo "$ORACLE_HOME/bin/netca -silent -responsefile $ORACLE_HOME/assistants/netca/netca.rsp" > ${SUDO_USER_HOME}/netca.sh
+    chown ${SUDO_USER}:${INV_UNIX_GROUP_NAME} ${SUDO_USER_HOME}/netca.sh
+    sudo -u $SUDO_USER -s chmod u+x ${SUDO_USER_HOME}/netca.sh
+    sudo -u $SUDO_USER -s ${SUDO_USER_HOME}/netca.sh
+    echo -e "${SEPE}"
+
+    echo -e "${SEPS}"
+    echo "# Execute Database Configuration Assistant as $SUDO_USER"
+    echo "$ORACLE_HOME/bin/dbca  -silent -datafileDestination /u01/data/oradata -responseFile $ORACLE_HOME/assistants/dbca/dbca.rsp" > ${SUDO_USER_HOME}/dbca.sh
+    chown ${SUDO_USER}:${INV_UNIX_GROUP_NAME} ${SUDO_USER_HOME}/dbca.sh
+    sudo -u $SUDO_USER -s chmod u+x ${SUDO_USER_HOME}/dbca.sh
+    sudo -u $SUDO_USER -s ${SUDO_USER_HOME}/dbca.sh
+    echo -e "${SEPE}"
+
+    echo -e "${SEPS}"
+    echo "# Automatic start Database instance"
+    sed --in-place "s/^\(${STARTERDB_SID}:.*:\)[YN]/\1Y/" /etc/oratab
+
+    echo "# Add start script to init.d"
+
+    cat > /etc/init.d/dbora  << EOF2
+#! /bin/sh
+ORACLE_HOME=${ORACLE_HOME}
+ORACLE_OWNER=${SUDO_USER}
+
+PATH=\${PATH}:\$ORACLE_HOME/bin
+export ORACLE_HOME PATH
+
+case \$1 in
+'start')
+        su \$ORACLE_OWNER -c "\$ORACLE_HOME/bin/dbstart \$ORACLE_HOME" &
+        ;;
+'stop')
+        su \$ORACLE_OWNER -c "\$ORACLE_HOME/bin/dbshut \$ORACLE_HOME" &
+        ;;
+        *)
+        echo "usage: $0 {start|stop}"
+        exit
+        ;;
+esac
+exit
+EOF2
+
+    chgrp ${INV_UNIX_GROUP_NAME} /etc/init.d/dbora
+    chmod 750 /etc/init.d/dbora
+
+    echo "# Create symbolic links to run-level scripts"
+    ln -s /etc/init.d/dbora /etc/rc.d/rc0.d/K01dbora
+    ln -s /etc/init.d/dbora /etc/rc.d/rc3.d/S99dbora
+    ln -s /etc/init.d/dbora /etc/rc.d/rc5.d/S99dbora
+
+    echo -e "${SEPE}"
+
+  else
+    echo "responsfile \"$DBINSTFILESDIR/response/$INSTRSP\" not found"
+    exit 255
+  fi
+else
+  echo "install directory  \"$DBINSTFILESDIR\" not found"
+  exit 255
+fi
+
+
+echo -e "${SEPS}"
+echo "# Alter system params"
+pwd
+sudo -u ${SUDO_USER} -s $0 altersystem
+echo -e "${SEPE}"
+
+echo -e "${SEPS}"
+echo "# Accept incoming connections on port 1521 and 5500"
+iptables -I INPUT -p tcp --dport 1521 -j ACCEPT
+iptables -I INPUT -p udp --dport 1521 -j ACCEPT
+iptables -I INPUT -p tcp --dport 5500 -j ACCEPT
+service iptables save
+echo -e "${SEPE}"
+
+echo "# Done!"
+
+exit

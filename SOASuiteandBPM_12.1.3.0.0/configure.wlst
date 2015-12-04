@@ -1,0 +1,262 @@
+# wlst
+
+import socket;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Writer;
+import re;
+
+
+def createFile(directory_name, file_name, content):
+    dedirectory = java.io.File(directory_name);
+    defile = java.io.File(directory_name + '/' + file_name);
+
+    writer = None;
+    try:
+        dedirectory.mkdirs();
+        defile.createNewFile();
+        writer = java.io.FileWriter(defile);
+        writer.write(content);
+    finally:
+        try:
+            print '    - WRITING FILE ' + file_name;
+            if writer != None:
+                writer.flush();
+                writer.close();
+        except java.io.IOException, e:
+            e.printStackTrace();
+
+def setServer(managed_server_name,managed_server_listen_port,machine_listen_address,cluster_name,server_groups):
+    cd('/Servers/' + str(managed_server_name));
+    cmo.setListenPort(managed_server_listen_port);
+    #cmo.setListenAddress(machine_listen_address);
+    cmo.setCluster(cluster);
+    cmo.setMachine(machine);
+    print '      - CONFIGURE OVERLOAD PROTECTION';
+    overload_protection = create(managed_server_name,'OverloadProtection');
+    overload_protection.setFailureAction('force-shutdown');
+    overload_protection.setPanicAction('system-exit');
+    cd('OverloadProtection/' + managed_server_name);
+    create(managed_server_name,'ServerFailureTrigger');
+    cd('../..');
+    overload_protection.getServerFailureTrigger().setMaxStuckThreadTime(600);
+    overload_protection.getServerFailureTrigger().setStuckThreadCount(0);
+    print '      - CONFIGURE LOGGING';
+    server_log = create(managed_server_name,'Log');
+    server_log.setRotationType('bySize');
+    server_log.setFileMinSize(5000);
+    server_log.setNumberOfFilesLimited(java.lang.Boolean('true'));
+    server_log.setFileCount(10);
+    server_log.setLogFileSeverity('Warning');
+    server_log.setStdoutSeverity('Error');
+    server_log.setDomainLogBroadcastSeverity('Error');
+    web_server = create(managed_server_name,'WebServer');
+    cd('WebServer/' + managed_server_name);
+    create(managed_server_name,'WebServerLog');
+    cd('../..');
+    web_server.getWebServerLog().setLoggingEnabled(java.lang.Boolean('false'));
+    web_server.getWebServerLog().setRotationType('bySize');
+    web_server.getWebServerLog().setFileMinSize(5000);
+    web_server.getWebServerLog().setNumberOfFilesLimited(java.lang.Boolean('true'));
+    web_server.getWebServerLog().setFileCount(10);
+    cd('../..');
+    print '      - SET SERVER GROUP';
+    print '        - Set ' + str(server_groups) + ' for ' + str(managed_server_name) ;
+    setServerGroups(managed_server_name, server_groups);
+    print '      - ASSIGN SERVER TO CLUSTER';
+    assign('Server', managed_server_name, 'Cluster', cluster_name);
+    cd('/');
+
+print '  - PROCESS PROPERTIES'
+soa_server_groups = soa_server_groups_list.split(',')
+soa_server_groups = [soa_server_group.strip() for soa_server_group in soa_server_groups]
+osb_server_groups = osb_server_groups_list.split(',')
+osb_server_groups = [osb_server_group.strip() for osb_server_group in osb_server_groups]
+bam_server_groups = bam_server_groups_list.split(',')
+bam_server_groups = [bam_server_group.strip() for bam_server_group in bam_server_groups]
+
+print '  - CREATE TEMPLATE PATHS';
+weblogic_template=wl_home + '/common/templates/wls/wls.jar';
+bpm_template=mw_home + '/soa/common/templates/wls/oracle.bpm_template_12.1.3.jar';
+soa_template=mw_home + '/soa/common/templates/wls/oracle.soa_template_12.1.3.jar';
+bam_template=mw_home + '/soa/common/templates/wls/oracle.bam.server_template_12.1.3.jar';
+osb_template=mw_home + '/osb/common/templates/wls/oracle.osb_template_12.1.3.jar'; 
+
+print '  - CREATE DOMAIN "' + domain_name + '"' ;
+readTemplate(weblogic_template);
+setOption('DomainName', domain_name);
+setOption('OverwriteDomain', 'true');
+setOption('JavaHome', java_home);
+setOption('ServerStartMode', 'prod');
+setOption('NodeManagerType', 'CustomLocationNodeManager');
+setOption('NodeManagerHome', nm_home);
+cd('/Security/base_domain/User/weblogic');
+cmo.setName(admin_username);
+cmo.setUserPassword(admin_password);
+cd('/');
+
+print '  - SAVE DOMAIN "' + domain_home + '"' ;
+writeDomain(domain_home);
+closeTemplate();
+
+print '  - READ DOMAIN "' + domain_home + '"' ;
+readDomain(domain_home);
+
+print '  - ADD TEMPLATES';
+# https://docs.oracle.com/middleware/1213/wls/WLDTR/fmw_templates.htm#WLDTR355
+# When only soa is needed comment addTemplate(bpm_template) and uncomment addTemplate(soa_template)
+addTemplate(bpm_template);
+addTemplate(osb_template);
+addTemplate(bam_template);
+setOption('AppDir', domain_app_home);
+
+print '  - CHANGE ADMINSERVER LOGLEVELS'
+server_log = create('AdminServer','Log');
+server_log.setRotationType('bySize');
+server_log.setFileMinSize(5000);
+server_log.setNumberOfFilesLimited(java.lang.Boolean('true'));
+server_log.setFileCount(10);
+server_log.setLogFileSeverity('Warning');
+server_log.setStdoutSeverity('Error');
+server_log.setDomainLogBroadcastSeverity('Error');
+
+print '  - CREATE MACHINE ' + machine_listen_address ;
+machine = create('machine_' + machine_listen_address ,'UnixMachine');
+machine.setPostBindUIDEnabled(java.lang.Boolean('true'));
+machine.setPostBindUID(machine_uid);
+machine.setPostBindGIDEnabled(java.lang.Boolean('true'));
+machine.setPostBindGID(machine_grp);
+cd('/Machine/' + machine.getName());
+nodemanager = create(machine.getName(),'NodeManager');
+nodemanager.setListenAddress(machine_listen_address);
+nodemanager.setNMType(node_manager_mode);
+cd('/');
+
+
+print '  - CREATE CLUSTERS'
+
+managed_server_listen_port=8001
+cluster_name="soa_cluster"
+print '    - CREATE CLUSTER ' + cluster_name ;
+cluster = create(cluster_name,'Cluster');
+cluster.setClusterMessagingMode('multicast');
+cluster.setMulticastAddress('239.192.0.1');
+cluster.setMulticastPort(9001);
+setServer('soa_server1',managed_server_listen_port,machine_listen_address,cluster_name,soa_server_groups)
+
+
+managed_server_listen_port=8002
+cluster_name="osb_cluster"
+print '    - CREATE CLUSTER ' + cluster_name ;
+cluster = create(cluster_name,'Cluster');
+cluster.setClusterMessagingMode('multicast');
+cluster.setMulticastAddress('239.192.0.2');
+cluster.setMulticastPort(9002);
+setServer('osb_server1',managed_server_listen_port,machine_listen_address,cluster_name,osb_server_groups)
+
+
+managed_server_listen_port=8003
+cluster_name="bam_cluster"
+print '    - CREATE CLUSTER ' + cluster_name ;
+cluster = create(cluster_name,'Cluster');
+cluster.setClusterMessagingMode('multicast');
+cluster.setMulticastAddress('239.192.0.3');
+cluster.setMulticastPort(9003);
+setServer('bam_server1',managed_server_listen_port,machine_listen_address,cluster_name,bam_server_groups)
+
+
+## re-target wsm-pm
+##cd('/AppDeployment/wsm-pm');
+##assign('AppDeployment','wsm-pm','Target','soa_server1,bam_server1')
+
+## re-target mds-owsm
+##cd('/JDBCSystemResources/mds-owsm')
+##set('Targets','AdminServer,bam_cluster,soa_cluster');
+
+####set('Targets',jarray.array([ObjectName('com.bea:Name=AdminServer,Type=Server'), ObjectName('com.bea:Name=bam_cluster,Type=Cluster'), ObjectName('com.bea:Name=soa_cluster,Type=Cluster')], ObjectName))
+#cmo.setTargets(['soa_server1','bam_server1']);
+
+cd('/');
+print '  - RETARGET JMS RESOURCES';
+filestores = cmo.getFileStores();
+for filestore in filestores:
+    filestore.setDirectory(domain_app_home);
+    targets = filestore.getTargets();
+    for target in targets:
+        if ' (migratable)' in target.getName():
+            assign('FileStore', filestore.getName(), 'Target', re.sub('\s\(migratable\)', '' , target.getName()));
+jmsservers = cmo.getJMSServers();
+for jmsserver in jmsservers:
+    targets = jmsserver.getTargets();
+    for target in targets:
+        if ' (migratable)' in target.getName():
+            assign('JMSServer', jmsserver.getName(), 'Target', re.sub('\s\(migratable\)', '' , target.getName()));
+safagents = cmo.getSAFAgents();
+for safagent in safagents:
+    targets = safagent.getTargets();
+    for target in targets:
+        if ' (migratable)' in target.getName():
+            assign('SAFAgent', safagent.getName(), 'Target', re.sub('\s\(migratable\)', '' , target.getName()));
+
+print '  - RETARGET OSGI FRAMEWORKS'
+osgiframeworks = cmo.getOsgiFrameworks();
+for osgiframework in osgiframeworks:
+    cd('/OsgiFramework/' + osgiframework.getName());
+    set('Target','soa_cluster');
+cd('/') ;
+
+print '  - ADJUST DATA SOURCE SETTINGS';
+jdbcsystemresources = cmo.getJDBCSystemResources();
+for jdbcsystemresource in jdbcsystemresources:
+    print '    - DATASOURCE ' + jdbcsystemresource.getName()
+    cd ('/JDBCSystemResource/' + jdbcsystemresource.getName() + '/JdbcResource/' + jdbcsystemresource.getName() + '/JDBCConnectionPoolParams/NO_NAME_0');
+    cmo.setInitialCapacity(1);
+    cmo.setMaxCapacity(15);
+    cmo.setMinCapacity(1);
+    cmo.setStatementCacheSize(0);
+    cmo.setTestConnectionsOnReserve(java.lang.Boolean('false'));
+    cmo.setTestTableName(data_source_test);
+    cmo.setConnectionCreationRetryFrequencySeconds(30);
+    cd ('/JDBCSystemResource/' + jdbcsystemresource.getName() + '/JdbcResource/' + jdbcsystemresource.getName() + '/JDBCDriverParams/NO_NAME_0');
+    cmo.setUrl(data_source_url);
+    cmo.setPasswordEncrypted(data_source_password);
+    if cmo.getDriverName() == 'oracle.jdbc.xa.client.OracleXADataSource':
+      print '    - CHANGING DRIVER FOR ' + jdbcsystemresource.getName();
+      cmo.setDriverName(data_source_driver);
+      cd ('/JDBCSystemResource/' + jdbcsystemresource.getName() + '/JdbcResource/' + jdbcsystemresource.getName() + '/JDBCDataSourceParams/NO_NAME_0');
+      cmo.setGlobalTransactionsProtocol('LoggingLastResource');
+    cd ('/JDBCSystemResource/' + jdbcsystemresource.getName() + '/JdbcResource/' + jdbcsystemresource.getName() + '/JDBCDriverParams/NO_NAME_0/Properties/NO_NAME_0/Property/user');
+    cmo.setValue(cmo.getValue().replace('DEV',data_source_user_prefix));
+cd('/');
+
+
+print "  - SET NODE MANAGER CREDENTIALS";
+cd("/SecurityConfiguration/" + domain_name);
+cmo.setNodeManagerUsername(node_manager_username);
+cmo.setNodeManagerPasswordEncrypted(node_manager_password);
+
+print "  - SET UP LDAP CONFIGURATION"
+cd('/SecurityConfiguration/'+ domain_name +'/Realms/myrealm');
+cd('AuthenticationProviders/DefaultAuthenticator');
+set('ControlFlag', 'SUFFICIENT');
+cd('../../');
+
+print '  - SAVE CHANGES';
+updateDomain();
+closeDomain();
+
+
+print '  - CREATE BOOT.PROPERTIES'
+directory_name = domain_home + '/servers/'+ admin_server_name +'/security';
+file_name = 'boot.properties';
+content = 'username=' + admin_username + '\npassword=' + admin_password;
+createFile(directory_name, file_name, content);
+
+
+print '  - CREATE NODEMANAGER.PROPERTIES'
+directory_name = nm_home;
+file_name = 'nodemanager.properties';
+if node_manager_mode == 'plain':
+    content='DomainsFile=' + nm_home + '/nodemanager.domains\nLogLimit=0\nPropertiesVersion=12.1\nAuthenticationEnabled=true\nNodeManagerHome=' + nm_home + '\nJavaHome=' + java_home +'\nLogLevel=INFO\nDomainsFileEnabled=true\nStartScriptName=startWebLogic.sh\nListenAddress=' + node_manager_listen_address + '\nNativeVersionEnabled=true\nListenPort=' + node_manager_listen_port + '\nLogToStderr=true\nSecureListener=false\nLogCount=1\nStopScriptEnabled=false\nQuitEnabled=false\nLogAppend=true\nStateCheckInterval=500\nCrashRecoveryEnabled=true\nStartScriptEnabled=true\nLogFile=' + nm_home + '/nodemanager.log\nLogFormatter=weblogic.nodemanager.server.LogFormatter\nListenBacklog=50';
+createFile(directory_name, file_name, content);

@@ -1,0 +1,32 @@
+#/bin/bash
+
+
+export tarball=SoapUI-5.2.1-linux-bin.tar.gz
+
+echo "Start installation"
+if [ -f $tarball ] ; then  
+  mkdir /u01/app/smartbear
+  tar -xvf $tarball -C /u01/app/smartbear
+else
+  echo "installer \"$tarball\" not found"
+  exit 255
+fi
+echo "Done!"
+
+
+echo "Create Desktop link"
+
+sudo -E bash -c 'cat > /usr/share/applications/SoapUI.desktop <<EOF
+#!/usr/bin/env xdg-open
+
+[Desktop Entry]
+Version=1.0
+Type=Application
+Terminal=false
+Icon[en_US]=/u01/app/smartbear/SoapUI-5.2.1/bin
+Name[en_US]=SoapUI
+Exec=/u01/app/smartbear/SoapUI-5.2.1/bin/soapui.sh
+Name=JDeveloper_12.1.3
+Icon=/u01/app/smartbear/SoapUI-5.2.1/bin/
+Categories=FusionMiddleware
+EOF'

@@ -1,0 +1,25 @@
+################################################################################
+# Download and preparation 
+################################################################################
+
+
+## Oracle Database 12c Standard Editon 2
+
+Download "V77388-01_1of2.zip Oracle Database 12c Release 1 (12.1.0.2.0) SE2 for Linux x86-64"
+and "V77388-01_2of2.zipOracle Database 12c Release 1 (12.1.0.2.0) SE2 for Linux x86-64"
+from Oracle Software Delivery Cloud and place the files in this folder.
+
+Unzip the two files within this folder. If expanded correctly a sub-folder "database" 
+will have been created.
+
+
+
+
+
+
+
+
+
+
+
+

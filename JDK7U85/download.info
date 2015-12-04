@@ -1,0 +1,24 @@
+################################################################################
+# Download and preparation 
+################################################################################
+
+
+## Oracle JDK and Oracle JRE 1.7.0_85-b15 with Auto-Update Off 
+
+Download the patch for bug 13079846 and platform Linux x86-64 from support.oracle.com 
+and copy the downloaded file, p13079846_17000_Linux-x86-64.zip, to this folder.
+
+Unzip the file within this folder. If expanded correctly a sub-folder "p13079846_17000_Linux-x86-64" 
+will have been created.
+
+
+
+
+
+
+
+
+
+
+
+

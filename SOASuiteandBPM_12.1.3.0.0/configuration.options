@@ -1,0 +1,43 @@
+## Software tree
+##
+export ORACLE_BASE=/u01/app/oracle
+export ORACLE_HOME=${ORACLE_BASE}/product/12.1.3/SOA
+
+export MW_HOME=${ORACLE_BASE}/product/12.1.3/SOA
+export WL_HOME=${MW_HOME}/wlserver
+export FMW_HOME=${MW_HOME}/oracle_common
+export SOA_HOME=${MW_HOME}/soa
+
+## Domain settings
+##
+export DOMAIN_NAME=soa12c
+
+## Config tree
+##
+export CONFIG_BASE=/u01/data
+export DOMAIN_HOME=${CONFIG_BASE}/domains/${DOMAIN_NAME}
+export NM_HOME=${CONFIG_BASE}/nodemanagers/${DOMAIN_NAME}
+export DOMAIN_APP_HOME=${CONFIG_BASE}/apps/${DOMAIN_NAME}
+
+## Java
+##
+export JAVA_HOME='/usr/java/default'
+
+## Hostname
+##
+export INSTALL_HOST=$(hostname)
+
+## Nodemanager
+export NM_USERNAME=nodemanager
+export NM_PASSWORD=welcome1
+export NM_PORT=5556
+
+## AdminServer
+export AS_USERNAME=weblogic
+export AS_PASSWORD=welcome1
+export AS_PORT=7001
+
+
+## Database
+DB_SERVICE=ORCLDB12C
+DB_DS_PASSWORD=welcome1

@@ -1,0 +1,26 @@
+################################################################################
+# Download and preparation 
+################################################################################
+
+
+## Oracle Fusion Middleware Infrastructure 12.1.3.0.0
+Download "V44416-01.zip" from edelivery.oracle.com unzip the file "V44416-01.zip"
+in this folder. If expanded correctly a file "fmw_12.1.3.0.0_infrastructure.jar" 
+will have been created.
+
+OR 
+
+Download the file "fmw_12.1.3.0.0_infrastructure_Disk1_1of1.zip" from the Oracle ADF download page on OTN 
+(http://www.oracle.com/technetwork/developer-tools/adf/downloads/index.html) and unzip the file
+in this folder. If expanded correctly a file "fmw_12.1.3.0.0_infrastructure.jar" 
+will have been created.
+
+
+
+## WLS PATCH SET UPDATE 12.1.3.0.5
+Download the patch "p21370953_121300_Generic.zip" for bug 21370953 from support.oracle.com
+and copy the downloaded file to this folder. Unzip the file within this folder. 
+If expanded correctly a sub-folder "21370953" will have been created.
+
+
+

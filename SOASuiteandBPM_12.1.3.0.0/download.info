@@ -1,0 +1,24 @@
+################################################################################
+# Download and preparation 
+################################################################################
+
+
+## Oracle Fusion Middleware 12c (12.1.3.0.0) SOA Suite and Business Process Management
+Download "V44420-01.zip" from edelivery.oracle.com and unzip the file "V44420-01.zip"
+in this folder. If expanded correctly a file "fmw_12.1.3.0.0_soa.jar" 
+will have been created.
+
+
+## Oracle Fusion Middleware 12c (12.1.3.0.0) Service Bus
+Download "V44423-01.zip" from edelivery.oracle.com and unzip the file "V44423-01.zip"
+in this folder. If expanded correctly a file "fmw_12.1.3.0.0_osb.jar" 
+will have been created.
+
+## SOA 12.1.3.0.4 Bundle Patch
+Download "Patch 21885138: SOA Bundle Patch 12.1.3.0.4(ID:150922.0917.0153)" from 
+support.oracle.com and unzip the file "p21885138_121300_Generic.zip"
+in this folder. If expanded correctly a folder "21885138" 
+will have been created.
+
+
+

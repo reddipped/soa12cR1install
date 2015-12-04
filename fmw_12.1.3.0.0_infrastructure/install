@@ -1,0 +1,36 @@
+#/bin/bash
+
+
+export instrpm="fmw_12.1.3.0.0_infrastructure.jar"
+export instrsp="silent.rsp"
+export ORACLEHOME="soa"
+export ORACLE_HOME=/u01/app/oracle/product/12.1.3/${ORACLEHOME^^}
+
+cp ${instrsp} /tmp
+sed --in-place "s#^\(ORACLE_HOME.*=\).*#\1${ORACLE_HOME}#"  /tmp/${instrsp}
+
+echo "Start installation"
+if [ -f $instrpm ] ; then
+  if [ -f /tmp/${instrsp} ] ; then
+
+    java -Xmx1024m -jar ${instrpm} -silent -responseFile /tmp/${instrsp} -invPtrLoc /u01/app/oraInst.loc >> /tmp/${instrpm}_install.log
+
+    echo "Install done, start config"
+  else
+    echo "responsfile \"/tmp/${instrsp}\" not found"
+    exit 255
+  fi
+else
+  echo "installer \"$instrpm\" not found"
+  exit 255
+fi
+echo "Done!"
+
+
+echo "Apply PS 12.1.3.0.5"
+
+export JAVA_HOME=/usr/java/default
+cd 21370953
+${ORACLE_HOME}/OPatch/opatch apply -jdk $JAVA_HOME -silent
+
+exit

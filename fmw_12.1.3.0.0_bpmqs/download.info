@@ -1,0 +1,10 @@
+################################################################################
+# Download and preparation 
+################################################################################
+
+
+## Oracle Fusion Middleware 12c (12.1.3.0.0) Business Process Management Quick Start for Developers
+Download "V45206-01.zip" from edelivery.oracle.com and unzip the file 
+in this folder. If expanded correctly the files "fmw_12.1.3.0.0_bpm_quickstart.jar" and  
+"fmw_12.1.3.0.0_bpm_quickstart2.jar" will have been created in folder "V45206-01".
+

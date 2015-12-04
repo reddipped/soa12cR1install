@@ -1,0 +1,33 @@
+################################################################################
+# Download and preparation 
+################################################################################
+
+
+## Oracle Linux 6u7
+Download "V77197-01.iso Oracle Linux Release 6 Update 7 for x86_64 (64 Bit)"
+from Oracle Software Delivery Cloud and place the file V77197-01.iso in this folder
+
+
+## CDR Tools
+
+Download the latest version of cdrtools (cdrtools-3.*.tar.gz) from 
+http://sourceforge.net/projects/cdrtools/files/
+
+Build cdrtools, instructions below have been tested on OS X and may vary 
+per host operating system. For detailed information see http://cdrecord.org or 
+http://sourceforge.net/projects/cdrtoolswin/
+
+	mkdir cdrtools
+	tar -xf cdrtools-3.*.tar.gz -C cdrtools
+	cd cdrtools
+	cd cdrtools*
+	make
+
+
+
+
+
+
+
+
+
