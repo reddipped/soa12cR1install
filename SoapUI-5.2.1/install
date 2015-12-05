@@ -13,7 +13,6 @@ else
 fi
 echo "Done!"
 
-
 echo "Create Desktop link"
 
 sudo -E bash -c 'cat > /usr/share/applications/SoapUI.desktop <<EOF

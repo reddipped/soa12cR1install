@@ -1,13 +1,15 @@
 # Kickstart file
 # ks-bd.ks (basic server minimal desktop)
-# Objective: (Mostly) unattend install of Oracle Linux 6u4
+# Objective: (Mostly) unattend install of Oracle Linux 6u7
 #            On start, hostame, IP-Address, subnet mask and gateway are
 #            requested in interactive mode.
 # Result:    Oracle Linux with users and groups oracle (g_fmw)
-#	         Password foor root, oracle and dba set as "welcome1"
+#            Group vboxsf assigned to user oracle
+#	           Password foor root, oracle and dba set as "welcome1"
 #            Directory ownership/structure oracle:g_fmw /u01/app
 #            Install RPM oracle-rdbms-server-11gR2-preinstall
-#	         Install Parallels tools
+#            Install RPM oracle-rdbms-server-12cR1-preinstall
+#	           Install Virtual Box Additions
 #
 
 # Uncomment next line if Desktop should be started on boot
@@ -155,13 +157,9 @@ chvt 6
 ####
 ####
 /usr/sbin/useradd oracle
-#/usr/sbin/useradd dba
 /usr/sbin/groupadd g_fmw
-#/usr/sbin/groupadd g_dba
 /usr/sbin/usermod -g g_fmw oracle
-#/usr/sbin/usermod -g g_dba dba
 echo welcome1 | /usr/bin/passwd --stdin oracle
-#echo welcome1 | /usr/bin/passwd --stdin dba
 /bin/mkdir -p /u01/app
 /bin/chown -R oracle:g_fmw /u01/app
 /bin/mkdir -p /u01/data
@@ -203,8 +201,6 @@ EOF
 /etc/init.d/network restart
 /bin/sleep 5
 ## Update hosts file
-##echo `/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 \
-##| awk '{ print $1}'` `hostname` `hostname | cut -d. -f1` >> /etc/hosts
 echo `/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 \
 | awk '{ print $1}'` ${HOSTNAME} ${HOSTNAME}.localdomain >> /etc/hosts
 
@@ -266,28 +262,6 @@ chkconfig --levels 345 sssd off
 chkconfig --levels 345 wpa_supplicant off
 chkconfig --levels 345 ypbind off
 
-
-#### Parallels tools installs
-## Install Parallel tools on first boot
-##cat > /root/install_parallels.sh <<EOF
-###!/bin/bash
-
-##/bin/sed --in-place 's#/root/install_parallels\.sh.*##' /etc/rc*.d/*.local
-###chmod u-x /root/install_parallels.sh
-##mkdir /tmp/parallels
-##/bin/mount -o loop /tmp/prl-tools-lin.iso /tmp/parallels
-##cd /tmp/parallels
-##./install --install-unattended-with-deps
-##cd /tmp
-##/bin/umount -f /tmp/parallels
-##/bin/sed --in-place "s#^/usr/bin/zenity.*##g" /etc/gdm/Init/Default
-##shutdown -r now Restarting
-##EOF
-
-##chmod u+x /root/install_parallels.sh
-##echo "/root/install_parallels.sh & >> /tmp/parallels_inst.log" >> /etc/rc.local
-##/bin/sed --in-place "s#\(exit 0\)#/usr/bin/zenity --info --width=400 --height=100 --title=\"Hey there\" --text=\"Hi There!\\\\n\\\\nPlease wait a moment.\\\\n\\\\nI am making the finishing touches and will need to reboot shortly.\\\\n\"\n\n\1#" /etc/gdm/Init/Default
-
 ### VirtualBox additions install
 ## Install VirtualBox additions on first boot
 cat > /root/install_vboxadditions.sh <<EOF
@@ -311,13 +285,11 @@ echo "/root/install_vboxadditions.sh & 2>&1 >> /tmp/vboxadditions_inst.log" >> /
 /bin/sed --in-place "s#\(exit 0\)#/usr/bin/zenity --info --width=400 --height=100 --title=\"Hey there\" --text=\"Hi There!\\\\n\\\\nPlease wait a moment.\\\\n\\\\nI am making the finishing touches and will need to reboot shortly.\\\\n\"\n\n\1#" /etc/gdm/Init/Default
 
 
-
 # You can switch back to Anaconda on the first console by
 # uncommenting the following two lines
 #chvt 1
 #exec < /dev/tty1 > /dev/tty1 2> /dev/tty1
 
-#reboot --eject
 reboot
 
 %end

@@ -5,7 +5,6 @@ export instjar=V45206-01/fmw_12.1.3.0.0_bpm_quickstart.jar
 export instrsp=jdev_qs.rsp
 
 
-
 apply_BP4() {
   
     echo "Apply SOA BP 4"
@@ -14,7 +13,6 @@ apply_BP4() {
     export JAVA_HOME=/usr/java/default
     cd ../SOASuiteandBPM_12.1.3.0.0/21885138
     ${ORACLE_HOME}/OPatch/opatch apply -jdk $JAVA_HOME -silent
-
   
 }
 
@@ -35,13 +33,9 @@ else
 fi
 echo "Done!"
 
-
-
 apply_BP4
 
-
 echo "Create Desktop link"
-
 
 sudo -E bash -c 'cat > /usr/share/applications/JDeveloper.desktop <<EOF
 #!/usr/bin/env xdg-open
