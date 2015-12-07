@@ -274,8 +274,8 @@ cd /tmp
 /bin/umount -f /tmp/vboxadditions
 /bin/sed --in-place "s#^/usr/bin/zenity.*##g" /etc/gdm/Init/Default
 
-## Disable screensaver
-gconftool-2 -s /apps/gnome-screensaver/idle_activation_enabled --type=bool false
+## Disable screensaver for user Oracle
+sudo -u oracle gconftool-2 -s /apps/gnome-screensaver/idle_activation_enabled --type=bool false
 
 shutdown -r now Restarting
 EOF
