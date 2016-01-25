@@ -1,5 +1,5 @@
-PIChannel
-=========
+VirtualBox with SOA, BPM, OSB and BAM in 33 minutes
+===================================================
 
 
 # For detailed installation instructions
